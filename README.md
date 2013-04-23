@@ -3,4 +3,11 @@ anovaPlayground
 
 A shiny-powered app aimed at facilitating interactive exploration of ANOVA
 
-This project will be released in a few days (4/17/2013)
+## Version
+
+* 0.1   Intial release
+
+
+## License
+
+Copyright © 2013 Gregg Whitworth and licensed under [LGPLv3](http://www.gnu.org/copyleft/lesser.html).
