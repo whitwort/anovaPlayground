@@ -87,7 +87,8 @@ shinyServer(function(input, output) {
   anovaTable    <- reactive({
     
     data.frame( group     = rep(LETTERS[1:input$groups], each = input$n)
-              , response  = c(scaledMatrix()) )
+              , response  = c(scaledMatrix()) 
+              )
   
   })
   
@@ -115,15 +116,23 @@ shinyServer(function(input, output) {
     # The order of geom additions matters here because it determines what gets
     # plotted on each layer
     if (input$plotMean) {
-      p <- p + geom_hline( yintercept = mean(m) )
+      p <- p + geom_hline( yintercept = mean(m)
+                         , size       = 1
+                         , colour     = "grey50"
+                         )
     }
     
     if (input$plotMedian) {
-      p <- p + geom_hline( yintercept = median(m), colour = "grey50" )
+      p <- p + geom_hline( yintercept = median(m)
+                         , size       = 1
+                         , linetype   = 2
+                         , colour     = "grey50" 
+                         )
     }
     
     if (input$plotBoxplot) {
-      p <- p + geom_boxplot( aes(fill = group, alpha = 0.8)) + theme( legend.position = "none" )
+      p <- p + geom_boxplot( aes(fill = group, alpha = 0.8) ) + 
+        theme( legend.position = "none" )
     }
     
     if (input$plotDotplot) {
@@ -156,6 +165,21 @@ shinyServer(function(input, output) {
     sourceData <- anovaTable()
     
     p <- ggplot(sourceData, aes(response, fill = group)) + geom_density(alpha = 0.3)
+    
+    if (input$plotMean) {
+      p <- p + geom_vline( xintercept = mean(m)
+                           , size       = 1
+                           , colour     = "grey50"
+      )
+    }
+    
+    if (input$plotMedian) {
+      p <- p + geom_vline( xintercept = median(m)
+                           , size       = 1
+                           , linetype   = 2
+                           , colour     = "grey50" 
+      )
+    }
     
     if (input$plotScale == FALSE) {
       p <- p + xlim( min(m) + min(scaleGroupMeans(m, 10))
