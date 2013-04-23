@@ -1,11 +1,11 @@
 library(shiny)
+library(plyr)
 library(ggplot2)
 
 # Scaling functions factored out here for clarity
-scaleGroupMeans <- function(sourceMatrix, scalingFactor) {
+scaleGroupMeans <- function(d, scalingFactor) {
   
-  groupMeans <- colMeans(sourceMatrix)
-  globalMean <- mean(sourceMatrix)
+  globalMean <- mean(d$response)
   
   if (scalingFactor > 0) { 
     multiplier <- scalingFactor
@@ -13,14 +13,21 @@ scaleGroupMeans <- function(sourceMatrix, scalingFactor) {
     multiplier <- scalingFactor / 10
   }
   
-  groupDist <- groupMeans - globalMean
-  deltas    <- groupDist * multiplier
-  
-  return( deltas )
+  ddply( d
+       , .(group)
+       , function(x) {
+        
+          groupDist   <- mean(x$response) - globalMean
+          groupDelta  <- groupDist * multiplier
+          x$response  <- x$response + groupDelta
+          
+          return( x )
+         
+       })
   
 }
 
-scaleGroupSDs   <- function(sourceMatrix, scalingFactor) {
+scaleGroupSDs <- function(d, scalingFactor) {
   
   if (scalingFactor > 0) {
     multiplier <- -1 * (scalingFactor / 5)
@@ -28,10 +35,26 @@ scaleGroupSDs   <- function(sourceMatrix, scalingFactor) {
     multiplier <- abs(scalingFactor) / 10
   }
   
-  apply( sourceMatrix
-       , 2
-       , function(x) { (x - mean(x)) * multiplier }
-       )
+  ddply( d
+       , .(group)
+       , function(x) {
+         
+          deltas      <- (x$response - mean(x$response)) * multiplier
+          x$response  <- x$response - deltas
+         
+          return( x )
+          
+       })
+  
+}
+
+responseLimits <- function(d) {
+  
+  maxScaling <- scaleGroupMeans(d, 10)$response
+  
+  c( min(maxScaling) 
+   , max(maxScaling)
+   )
 
 }
 
@@ -40,7 +63,7 @@ scaleGroupSDs   <- function(sourceMatrix, scalingFactor) {
 shinyServer(function(input, output) {
   
   # The data source for our ANOVA is initially created as a matrix
-  sourceMatrix  <- reactive({
+  createMatrix  <- reactive({
     
     # Re-run this expression whenever the refresh button is clicked
     refresh <- input$refreshData
@@ -58,72 +81,59 @@ shinyServer(function(input, output) {
 
   })
   
-  # Changing within and between group varianes will change the centering/scaling
-  # of matrix columns
-  scaledMatrix  <- reactive({
-    
-    # Get the latest source matrix
-    m <- sourceMatrix()
-
-    # Group mean scaling (center)
-    if (input$globalScale != 0) {
-      m <- scale( m
-                , center  = scaleGroupMeans(m, input$globalScale) * -1
-                , scale   = FALSE
-                )
-    }
-    
-    # Group variance scaling
-    if (input$groupScale != 0) {
-      m <- (m - scaleGroupSDs(m, input$groupScale))
-    }
-    
-    return( m )
-    
-  })
-  
-  # For plotting and analysis we'll dump the matrix, along with group labels,
-  # into a two column data.frame
-  anovaTable    <- reactive({
+  sourceTable   <- reactive({
     
     data.frame( group     = rep(LETTERS[1:input$groups], each = input$n)
-              , response  = c(scaledMatrix()) 
+              , response  = c(createMatrix()) 
               )
   
+  })
+  
+  scaledTable   <- reactive({
+    
+    d  <- sourceTable()
+    
+    if (input$globalScale != 0) {
+      d <- scaleGroupMeans(d, input$globalScale)
+    }
+    
+    if (input$groupScale != 0) {
+      d <- scaleGroupSDs(d, input$groupScale)      
+    }
+    
+    return( d )
+    
   })
   
   # Re-run the ANOVA when the source data changes
   fitANOVA      <- reactive({
     
     # We'll use the aov wrapper which fits a GLM and then runs an ANOVA
-    aov(response ~ group, data = anovaTable())
+    aov(response ~ group, data = scaledTable())
     
   })
   
   # The render* functions produce results shown in the client
   output$groupPlot    <- renderPlot({
     
-    # The original data matrix
-    m          <- sourceMatrix()
-    
-    # The data.frame holding the potentially scaled/centered data
-    sourceData <- anovaTable()
+    sourceData <- sourceTable()
+    scaledData <- scaledTable()
     
     # We'll setup a ggplot2 plot with key aesthetic mappings and add geom_
     # elements based on the visualizations selected
-    p <- ggplot(sourceData, aes(group, response))
+    p <- ggplot(scaledData, aes(group, response))
     
     # The order of geom additions matters here because it determines what gets
     # plotted on each layer
     if (input$plotMean) {
-      p <- p + geom_hline( yintercept = mean(m)
+      p <- p + geom_hline( yintercept = mean(scaledData$response)
                          , size       = 1
                          , colour     = "grey50"
                          )
     }
     
     if (input$plotMedian) {
-      p <- p + geom_hline( yintercept = median(m)
+      p <- p + geom_hline( yintercept = median(scaledData$response)
                          , size       = 1
                          , linetype   = 2
                          , colour     = "grey50" 
@@ -148,9 +158,7 @@ shinyServer(function(input, output) {
     
     if (input$plotScale == FALSE) {
       
-      p <- p + ylim( min(m) + min(scaleGroupMeans(m, 10))
-                   , max(m) + max(scaleGroupMeans(m, 10))
-                   )
+      p <- p + ylim( responseLimits(sourceData) )
       
     }
     
@@ -161,30 +169,28 @@ shinyServer(function(input, output) {
   
   output$densityPlot  <- renderPlot({
     
-    m          <- sourceMatrix()
-    sourceData <- anovaTable()
+    sourceData <- sourceTable()
+    scaledData <- scaledTable()
     
-    p <- ggplot(sourceData, aes(response, fill = group)) + geom_density(alpha = 0.3)
+    p <- ggplot(scaledData, aes(response, fill = group)) + geom_density(alpha = 0.3)
     
     if (input$plotMean) {
-      p <- p + geom_vline( xintercept = mean(m)
-                           , size       = 1
-                           , colour     = "grey50"
-      )
+      p <- p + geom_vline( xintercept = mean(scaledData$response)
+                         , size       = 1
+                         , colour     = "grey50"
+                         )
     }
     
     if (input$plotMedian) {
-      p <- p + geom_vline( xintercept = median(m)
-                           , size       = 1
-                           , linetype   = 2
-                           , colour     = "grey50" 
-      )
+      p <- p + geom_vline( xintercept = median(scaledData$response)
+                         , size       = 1
+                         , linetype   = 2
+                         , colour     = "grey50" 
+                         )
     }
     
     if (input$plotScale == FALSE) {
-      p <- p + xlim( min(m) + min(scaleGroupMeans(m, 10))
-                   , max(m) + max(scaleGroupMeans(m, 10))
-      )
+      p <- p + xlim( responseLimits(sourceData) )
     }
     
     print(p)
@@ -209,17 +215,17 @@ shinyServer(function(input, output) {
     
     # Create a little data.frame with values for the current F density
     x       <- seq(0, 6, 0.1)
-    dF      <- data.frame(x = x, y = df(x, input$groups - 1, fit$df.residual))
+    d       <- data.frame(x = x, y = df(x, input$groups - 1, fit$df.residual))
     
     # Draw the F-distrubution for the current ANOVA fit
-    p <- ggplot(dF, aes(x, y)) + geom_line() + 
+    p <- ggplot(d, aes(x, y)) + geom_line() + 
           xlab("F-value") +
           ylab("Density")
            
     # If the F-value is low enough to visualize, we'll shade the area under the
     # F-dist curve for this probability
     if (f.value < 6) {
-      polygon <- rbind(c(f.value, 0), subset(dF, x >= f.value), c(dF[nrow(dF), "X"]), c(5,0))
+      polygon <- rbind(c(f.value, 0), subset(d, x >= f.value), c(d[nrow(d), "X"]), c(5,0))
       p <- p + geom_polygon(data = polygon, aes(x, y))
     }
     
