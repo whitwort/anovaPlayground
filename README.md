@@ -1,11 +1,13 @@
 anovaPlayground
 ===============
 
-A shiny-powered app aimed at facilitating interactive exploration of ANOVA
+A shiny-powered app designed to help students explore a one-way ANOVA.
+
 
 ## Version
 
-* 0.1   Intial release
+* 0.2   Added the option to use an existing dataset rather than generating one.
+* 0.1   Intial release.
 
 
 ## License

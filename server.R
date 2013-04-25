@@ -2,17 +2,36 @@ library(shiny)
 library(plyr)
 library(ggplot2)
 
-# Scaling functions factored out here for clarity
+# # #
+# Scaling functions
+#
+# After a bit of experimentation I settled on this approach to the scaling 
+# functions.  The implementation is a bit non-intuitive, but this design gave
+# the best tactile feel when playing with the sliders.
+#
+# Both sliders work on a -10 to 10 scale, but the behavior is fundamentally
+# different on either side of 0. Moving 0 > 10 amplifies variances by 10x
+# (between group) or 2x (within group); moving 0 > -10 collapses variances to
+# their global (between group) or local (within group) means.
+#
+# As of version ~0.2, both of the scaling functions operate on data.frame
+# structures (d) allowing them to support unbalanced designs.
+#
+# The third function, responseLimits, simply projects the widest group-scaling
+# data spread; it's used to pick response-axis limits.
+
 scaleGroupMeans <- function(d, scalingFactor) {
   
-  globalMean <- mean(d$response)
+  globalMean    <- mean(d$response)
   
   if (scalingFactor > 0) { 
-    multiplier <- scalingFactor
+    multiplier  <- scalingFactor
   } else {
-    multiplier <- scalingFactor / 10
+    multiplier  <- scalingFactor / 10
   }
   
+  # ddply from the plyr package; it takes a data.frame, splits it by .(group),
+  # applies the given function, and returns a new data.frame
   ddply( d
        , .(group)
        , function(x) {
@@ -40,7 +59,7 @@ scaleGroupSDs <- function(d, scalingFactor) {
        , function(x) {
          
           deltas      <- (x$response - mean(x$response)) * multiplier
-          x$response  <- x$response - deltas
+          x$response  <-  x$response - deltas
          
           return( x )
           
@@ -58,37 +77,122 @@ responseLimits <- function(d) {
 
 }
 
-# Define the server-side logic that updates data and plots in response to user
-# input
+
+# # #
+# Shiny server
+#
+# This large wrapper function defines the server-side logic for the web
+# application.  It's a giant closure that scopes input and output bindings.  The
+# input$ list will hold the latest data recieved from a client (a users's
+# browser page) and the output$ list is used to push results back out to the
+# client.  We don't have to worry about managing individual user sessions; shiny
+# will take care of that for us because it's awesome.
+
 shinyServer(function(input, output) {
   
-  # The data source for our ANOVA is initially created as a matrix
-  createMatrix  <- reactive({
+  # # #
+  # Reactive expressions
+  #
+  # The first set of data mappings that we'll define here are shiny reactive 
+  # expressions ( created with reactive({...}) ).  Each reactive call evaluates
+  # to a new closure we can use in the rest of our server code. The beauty of 
+  # the design of shiny is that the return from these reactives will be cached
+  # by the server and only updated when dependant input$ value(s) change.
+  #
+  # For us, this means that we'll end up with an efficient server as long as we
+  # partition the core application logic into discrete reactive expressions that
+  # have limited input$ dependencies and outputs that are useful to cache.
+  # 
+  
+  # The first of two possible paths to source data for the ANOVA is a randomly
+  # generated matrix
+  
+  createMatrix    <- reactive({
     
     # Re-run this expression whenever the refresh button is clicked
     refresh <- input$refreshData
     
+    # Choose our sampling function from a predefined list (we never eval() data 
+    # from a client for security reasons)
+    sample = list( "rnorm"  = rnorm
+                 , "rlnorm" = rlnorm
+                 , "runif"  = function (n, mean, sd) { 
+                                runif(n, mean - sd, mean + sd) 
+                              }
+                 )[[input$numberGenerator]]
+    
     # Replicate will return a matrix with one column of data for each group
     replicate( n    = input$groups
-               
-               # We'll use a random number generator pulling from a normal
-               # distribution to create the data for each column
-             , expr = rnorm( input$n 
-                           , mean = input$mean
-                           , sd   = input$sd
-                           )
+             , expr = sample( input$n 
+                            , mean = input$mean
+                            , sd   = input$sd
+                            )
              )
 
   })
   
+  # The second possible path to source data is a table that the user has
+  # uploaded
+  parseUserData   <- reactive({
+    
+    # Here we define a simple read.table closure; it will throw errors if there
+    # are any points of failure in loading or parsing user's data
+    loadUserData <- function() {
+      
+      if (input$uploadType == 'url') {
+        sourcePath <- input$url
+      } else {
+        sourcePath <- input$dataFile$datapath
+      }
+      
+      read.table( file    = sourcePath
+                , header  = input$fileHeader
+                , sep     = input$fileSeparator
+                , quote   = input$fileQuote
+                )
+      
+    }
+    
+    # Here we try loading and parsing the data given to us by the user.  If an
+    # error is thrown, we simply return a text description of what went wrong. 
+    # The value of this function will therefore be either: (a) a data.frame, or
+    # (b) a character vector with error information (we'll test for this
+    # below.)
+    tryCatch( loadUserData()
+            , error = function(e) { conditionMessage(e) }
+            )
+    
+  })
+  
+  # The two paths to source data converge here.  We maintain two data.frame
+  # objects: the source data and the scaled data.  This allows us to be smart
+  # about response-axis scaling.
   sourceTable   <- reactive({
     
-    data.frame( group     = rep(LETTERS[1:input$groups], each = input$n)
-              , response  = c(createMatrix()) 
-              )
+    # If we're loading user data, the parsing has gone well, and there is a
+    # clear grouping column and response variable column, use this data.
+    if ( input$dataSourceType == "upload" & 
+         !is.null(input$groupColumn) & 
+         !is.null(input$responseColumn)) {
+      
+      userData <- parseUserData()
+      data.frame( group     = userData[[input$groupColumn]]
+                , response  = userData[[input$responseColumn]]
+                )
+      
+    # If we're generating random data, or any of the above failed, fall back on
+    # our sampling matrix.
+    } else {
+      
+      data.frame( group     = rep(LETTERS[1:input$groups], each = input$n)
+                , response  = c(createMatrix()) 
+                )
+    
+    }
   
   })
   
+  # This closure returns the result of the current scaling settings.
   scaledTable   <- reactive({
     
     d  <- sourceTable()
@@ -105,7 +209,7 @@ shinyServer(function(input, output) {
     
   })
   
-  # Re-run the ANOVA when the source data changes
+  # We'll re-run the ANOVA whenever the scaling changes.
   fitANOVA      <- reactive({
     
     # We'll use the aov wrapper which fits a GLM and then runs an ANOVA
@@ -113,7 +217,16 @@ shinyServer(function(input, output) {
     
   })
   
-  # The render* functions produce results shown in the client
+  
+  # # #
+  # output$ functions
+  #
+  # In this section of the server code we map special reactive expressions (the 
+  # render* functions) to output$ bindings; this is the data that gets sent to 
+  # clients. Like the reactive expressions above, these values are only 
+  # recalculated when their inputs change.
+  
+  # The main group-response variable plot
   output$groupPlot    <- renderPlot({
     
     sourceData <- sourceTable()
@@ -142,14 +255,15 @@ shinyServer(function(input, output) {
     
     if (input$plotBoxplot) {
       p <- p + geom_boxplot( aes(fill = group, alpha = 0.8) ) + 
-        theme( legend.position = "none" )
+          theme( legend.position = "none" )
     }
     
     if (input$plotDotplot) {
       p <- p + geom_dotplot( binaxis  = "y"
                            , stackdir = "center"
                            , aes( fill =  group, alpha = 0.9 )
-                           ) + theme( legend.position = "none" )
+                           ) + 
+          theme( legend.position = "none" )
     }
     
     if (input$plotPoint) {
@@ -157,22 +271,25 @@ shinyServer(function(input, output) {
     }
     
     if (input$plotScale == FALSE) {
-      
       p <- p + ylim( responseLimits(sourceData) )
-      
     }
     
-    # Send the final plot to the client
+    # We call print() to send the final plot to the client
     print(p)
     
   })
   
+  # For now, we need to put the density plots in a separate visualization from
+  # the above because it is non-trivial to mix x-axis scales in a single plot. 
+  # I've tried to make the density plots observe as many of the groupPlots
+  # settings as possible.
   output$densityPlot  <- renderPlot({
     
     sourceData <- sourceTable()
     scaledData <- scaledTable()
     
-    p <- ggplot(scaledData, aes(response, fill = group)) + geom_density(alpha = 0.3)
+    p <- ggplot(scaledData, aes(response, fill = group)) + 
+          geom_density(alpha = 0.3)
     
     if (input$plotMean) {
       p <- p + geom_vline( xintercept = mean(scaledData$response)
@@ -197,17 +314,17 @@ shinyServer(function(input, output) {
     
   })
   
+  # Here we send the actual ANOVA results to the client as a simple text block.
   output$summary      <- renderPrint({
     
-    # Get the latest ANOVA fit and print summary text
     fit <- fitANOVA()
     summary(fit)
     
   })
   
+  # This plot shows the F-distribution corresonding to the latest fit.
   output$distPlot   <- renderPlot({
     
-    # Get the lastest ANOVA fit
     fit     <- fitANOVA()
     
     # This is ugly, but it will extract and round the F-stat from the GLM fit
@@ -225,11 +342,93 @@ shinyServer(function(input, output) {
     # If the F-value is low enough to visualize, we'll shade the area under the
     # F-dist curve for this probability
     if (f.value < 6) {
-      polygon <- rbind(c(f.value, 0), subset(d, x >= f.value), c(d[nrow(d), "X"]), c(5,0))
-      p <- p + geom_polygon(data = polygon, aes(x, y))
+      polygon <- rbind( # The lower left corner of the shaded polygon
+                        c(f.value, 0)
+                        
+                        # The coordinates of the points along the f-dist curve
+                      , subset(d, x >= f.value)
+                      , c(d[nrow(d), "X"])
+                        
+                        # The lower right corner (given by cutoffs above)
+                      , c(5,0))
+      p       <- p + geom_polygon(data = polygon, aes(x, y))
     }
     
     print(p)
+    
+  })
+  
+  # To allow users to upload their own data to use in this application we have 
+  # to leverage some `experimental` shiny features.  These renderUI expressions 
+  # will generate HTML to send to the client that updates the UI based on 
+  # server-side state.
+  output$sourceDataUI <- renderUI({
+    
+    # If we're generating data, just show the user the result of the last random
+    # calculation
+    if ( input$dataSourceType == "generate" ) { 
+      HTML( renderTable(createMatrix())() )
+    
+    # If the user has asked us to use her data...  
+    } else {
+      
+      #Try to load and parse the user's data given the current input values
+      userData <- parseUserData()
+      
+      #If that worked... show the user her data in a table
+      if ( is.data.frame(userData) ) {
+        
+        HTML( renderTable(userData)() )
+      
+      # If that failed...
+      } else {
+        
+        # We'll default to a message generated in base R
+        message <- paste( "I couldn't parse your table because:"
+                        , br()
+                        , div(class = "shiny-output-error", userData)
+                        , br()
+                        , "Try changing the separator or quoting options above."
+                        )
+        
+        # More user-friendly error messages...
+        if ( input$uploadType == 'url' & input$url == "" ) {
+          message <- "Enter a url..."
+        }
+        if ( input$uploadType == 'file' & is.null(input$dataFile) ) {
+          message <- "Upload a file..."
+        }
+        
+        # Send out the result
+        HTML( renderText(message)() )
+        
+      }
+      
+    }
+  })
+  
+  # Generates selection controls to allow the user to choose a grouping and
+  # response variable from their uploaded table
+  output$columnSelectorUI <- renderUI({
+    
+    userData <- parseUserData()
+    
+    if ( is.data.frame(userData) ) {
+      
+      # I feel like there should be a more elegant way to do this...
+      groupColumns    <- colnames(userData)[sapply(userData, is.factor)]
+      responseColumns <- colnames(userData)[sapply(userData, is.numeric)]
+      
+      div( selectInput( "groupColumn"
+                       , "Grouping variable"
+                       , groupColumns
+                       )
+          , selectInput( "responseColumn"
+                       , "Response variable"
+                       , responseColumns
+                       )
+          )
+    }
     
   })
   

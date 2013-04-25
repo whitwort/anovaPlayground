@@ -36,31 +36,26 @@ shinyUI(pageWithSidebar(
                              , step  = 1
                              )
                 , br()
-                , sliderInput( "groups"
-                             , "Number of groups"
-                             , value = 5
-                             , min   = 2
-                             , max   = 20
-                             , step  = 1
-                             )
+                , conditionalPanel( 'input.dataSourceType == "generate"'
+                                  , sliderInput( "groups"
+                                               , "Number of groups"
+                                               , value = 5
+                                               , min   = 2
+                                               , max   = 20
+                                               , step  = 1
+                                               )
+                                  , br()
+                                  , numericInput( "n"
+                                                , "Group sample size"
+                                                , value = 10
+                                                , min   = 0
+                                                )
+                  
+                                  , br()
+                                  , actionButton("refreshData", "Refresh data")
+                                  )
                 , br()
-                , numericInput( "n"
-                              , "Group sample size"
-                              , value = 10
-                              , min   = 0
-                              )
-                , numericInput( "mean"
-                              , "Initial group mean"
-                              , value = 0
-                              )
-                , numericInput( "sd"
-                              , "Initial group standard deviation"
-                              , value = 1
-                              )
-                , br()
-                , actionButton("refreshData", "Refresh data")
-                , br(), br()
-                , helpText(toHTML("Version 0.1.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
+                , helpText(toHTML("Version 0.2.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
                 )
   
     # Main tab panels
@@ -72,10 +67,10 @@ shinyUI(pageWithSidebar(
                                
                                #Main plot area
                              , h4("Data")
-                             , conditionalPanel( condition = "input.plotPoint || input.plotBoxplot || input.plotDotplot" 
+                             , conditionalPanel( "input.plotPoint || input.plotBoxplot || input.plotDotplot" 
                                                , plotOutput("groupPlot")
                                                )
-                             , conditionalPanel( condition = "input.plotDensity"
+                             , conditionalPanel( "input.plotDensity"
                                                , plotOutput("densityPlot")
                                                )
                              )
@@ -104,8 +99,83 @@ shinyUI(pageWithSidebar(
                    )
               )
 
-#     , tabPanel( "Source data"
-#               )
+    , tabPanel( "Source data"
+              , div( class = "container-fluid" 
+                   , div( class = "row-fluid"
+                        , div( class = "span5"
+                             , selectInput( "dataSourceType"
+                                          , "Run the ANOVA using"
+                                          , choices = c( "Randomly generated data" = "generate"
+                                                       , "An existing dataset"     = "upload"
+                                                       )
+                                          )
+                             )
+                        , div( class = "span7"
+                             , wellPanel( conditionalPanel( 'input.dataSourceType == "generate"'
+                                                          , selectInput( "numberGenerator"
+                                                                       , "Sample from a"
+                                                                       , choices = c( "Normal distribution"     = "rnorm"
+                                                                                    , "Log-normal distribution" = "rlnorm"
+                                                                                    , "Uniform distribution"    = "runif"
+                                                                                    )
+                                                                       )
+                                                          , numericInput( "mean"
+                                                                        , "Initial group mean"
+                                                                        , value = 0
+                                                                        )
+                                                          , numericInput( "sd"
+                                                                        , "Initial group standard deviation"
+                                                                        , value = 1
+                                                                        )
+                                                          )
+                                        , conditionalPanel( 'input.dataSourceType == "upload"'
+                                                          , selectInput( "uploadType"
+                                                                       , "Get data from a"
+                                                                       , choices = c( "Web address"  = "url"
+                                                                                    , "Local file"   = "file"
+                                                                                    )
+                                                                       )
+                                                          , conditionalPanel( 'input.uploadType == "url"'
+                                                                            , textInput( "url", "URL")
+                                                                            )
+                                                          , conditionalPanel( 'input.uploadType == "file"'
+                                                                            , fileInput( "dataFile"
+                                                                                       , "Upload a file"
+                                                                                       )
+                                                                            )
+                                                          , checkboxInput( "fileHeader"
+                                                                         , "Dataset has a header row"
+                                                                         , TRUE
+                                                                         )
+                                                          , selectInput( "fileSeparator" 
+                                                                       , "Separator"
+                                                                       , choices = c( "Whitespace"  = ""
+                                                                                    , "Comma"       = ","
+                                                                                    , "Semicolon"   = ";"
+                                                                                    , "Tab"         = "\t"
+                                                                                    )
+                                                                       )
+                                                          , selectInput( "fileQuote"
+                                                                       , "String quoting"
+                                                                       , choices = c( 'Double (")'  = "\""
+                                                                                    , "Single (')"  = "'"
+                                                                                    , "None"        = ""
+                                                                                    )
+                                                                       )
+                                                          , uiOutput("columnSelectorUI")
+                                                          )
+                                          
+                                        )
+                             )
+                        )
+                     
+                    , div( class = "row-fluid"
+                         , wellPanel( uiOutput("sourceDataUI")
+                                    )
+                         )
+                    )
+              )
+      
 #       
 #     , tabPanel( "Assumptions"
 #               )
