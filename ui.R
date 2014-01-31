@@ -154,6 +154,16 @@ shinyUI(pageWithSidebar(
                                                                                     , "Tab"         = "\t"
                                                                                     )
                                                                        )
+                                                          , selectInput( "naStrings" 
+                                                                       , "Missing data"
+                                                                       , choices = c( "NA"          = "NA"
+                                                                                    , "ND"          = "ND"
+                                                                                    , "None"        = "None"
+                                                                                    , "null"        = "null"
+                                                                                    , "Empty text"  = ""
+
+                                                                       )
+                                                          )
                                                           , selectInput( "fileQuote"
                                                                        , "String quoting"
                                                                        , choices = c( 'Double (")'  = "\""

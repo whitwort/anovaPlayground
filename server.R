@@ -145,10 +145,11 @@ shinyServer(function(input, output) {
         sourcePath <- input$dataFile$datapath
       }
       
-      read.table( file    = sourcePath
-                , header  = input$fileHeader
-                , sep     = input$fileSeparator
-                , quote   = input$fileQuote
+      read.table( file        = sourcePath
+                , header      = input$fileHeader
+                , sep         = input$fileSeparator
+                , quote       = input$fileQuote
+                , na.strings  = input$naStrings
                 )
       
     }
