@@ -363,53 +363,38 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # To allow users to upload their own data to use in this application we have 
-  # to leverage some `experimental` shiny features.  These renderUI expressions 
-  # will generate HTML to send to the client that updates the UI based on 
-  # server-side state.
-  output$sourceDataUI <- renderUI({
-    
-    # If we're generating data, just show the user the result of the last random
-    # calculation
-    if ( input$dataSourceType == "generate" ) { 
-      HTML( renderTable(createMatrix())() )
-    
-    # If the user has asked us to use her data...  
+  # User feedback on the current source data
+  output$generatedData <- renderTable({ createMatrix() })
+  output$loadDataError <- renderUI({
+    userData <- parseUserData()
+    if ( is.data.frame(userData) ) {
+      HTML( renderText("") )
+      
     } else {
       
-      #Try to load and parse the user's data given the current input values
-      userData <- parseUserData()
-      
-      #If that worked... show the user her data in a table
-      if ( is.data.frame(userData) ) {
-        
-        HTML( renderDataTable(userData)() )
-      
-      # If that failed...
-      } else {
-        
-        # We'll default to a message generated in base R
-        message <- paste( "I couldn't parse your table because:"
+      # We'll default to a message generated in base R
+      message <- paste( "I couldn't parse your table because:"
                         , br()
                         , div(class = "shiny-output-error", userData)
                         , br()
                         , "Try changing the separator or quoting options above."
-                        )
-        
-        # More user-friendly error messages...
-        if ( input$uploadType == 'url' & input$url == "" ) {
-          message <- "Enter a url..."
-        }
-        if ( input$uploadType == 'file' & is.null(input$dataFile) ) {
-          message <- "Upload a file..."
-        }
-        
-        # Send out the result
-        HTML( renderText(message)() )
-        
+      )
+      
+      # More user-friendly error messages...
+      if ( input$uploadType == 'url' & input$url == "" ) {
+        message <- "Enter a url..."
+      }
+      if ( input$uploadType == 'file' & is.null(input$dataFile) ) {
+        message <- "Upload a file..."
       }
       
+      # Send out the result
+      HTML( renderText(message)() )
+      
     }
+  })
+  output$userTable <- renderDataTable({
+    parseUserData()
   })
   
   # Generates selection controls to allow the user to choose a grouping and

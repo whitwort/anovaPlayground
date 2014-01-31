@@ -188,7 +188,13 @@ shinyUI(pageWithSidebar(
                         )
                      
                     , div( class = "row-fluid"
-                         , wellPanel( uiOutput("sourceDataUI")
+                         , wellPanel( conditionalPanel( 'input.dataSourceType == "generate"'
+                                                      , tableOutput('generatedData')
+                                                      )
+                                    , conditionalPanel( 'input.dataSourceType == "upload"'
+                                                      , htmlOutput('loadDataError')
+                                                      , dataTableOutput('userTable')
+                                                      )
                                     )
                          )
                     )
