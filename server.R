@@ -9,11 +9,11 @@ library(ggplot2)
 # functions.  The implementation is a bit non-intuitive, but this design gave
 # the best tactile feel when playing with the sliders.
 #
-# Both sliders work on a -10 to 10 scale, but the behavior is fundamentally
-# different on either side of 0. Moving 0 > 10 amplifies variances by 10x
-# (between group) or 2x (within group); moving 0 > -10 collapses variances to
-# their global (between group) or local (within group) means.
-#
+# Both sliders work on a -10 to 10 scale, but the behavior is fundamentally 
+# different on either side of 0. Moving 0 > 10 amplifies distances by ~10x 
+# (between groups) or ~2x (within group); moving 0 > -10 collapses data to their
+# global (between group) or local (within group) means.
+# 
 # As of version ~0.2, both of the scaling functions operate on data.frame
 # structures (d) allowing them to support unbalanced designs.
 #
