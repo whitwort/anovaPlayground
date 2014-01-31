@@ -141,8 +141,12 @@ shinyServer(function(input, output) {
       
       if (input$uploadType == 'url') {
         sourcePath <- input$url
-      } else {
+      }
+      if (input$uploadType == 'file') {
         sourcePath <- input$dataFile$datapath
+      }
+      if (input$uploadType == 'data') {
+        sourcePath <- paste( "data", input$dataset, sep= "/")
       }
       
       read.table( file        = sourcePath

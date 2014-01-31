@@ -80,6 +80,9 @@ shinyUI(pageWithSidebar(
                                          
                                     # Visualization options
                                   , helpText("Data visualization")
+                                  , conditionalPanel( 'input.dataSourceType == "upload"'
+                                                    , uiOutput("columnSelectorUI")
+                                                    )
                                   , checkboxInput("plotPoint",   "Data points",   TRUE )
                                   , checkboxInput("plotBoxplot", "Boxplots",      FALSE)
                                   , checkboxInput("plotDotplot", "Dotplots",      FALSE)
@@ -130,8 +133,9 @@ shinyUI(pageWithSidebar(
                                         , conditionalPanel( 'input.dataSourceType == "upload"'
                                                           , selectInput( "uploadType"
                                                                        , "Get data from a"
-                                                                       , choices = c( "Web address"  = "url"
-                                                                                    , "Local file"   = "file"
+                                                                       , choices = c( "Web address"   = "url"
+                                                                                    , "Local file"    = "file"
+                                                                                    , "Class data" = "data"
                                                                                     )
                                                                        )
                                                           , conditionalPanel( 'input.uploadType == "url"'
@@ -141,6 +145,12 @@ shinyUI(pageWithSidebar(
                                                                             , fileInput( "dataFile"
                                                                                        , "Upload a file"
                                                                                        )
+                                                                            )
+                                                          , conditionalPanel( 'input.uploadType == "data"'
+                                                                            , selectInput( "dataset"
+                                                                                         , "Data set"
+                                                                                         , choices = list.files("data/")
+                                                                                         )
                                                                             )
                                                           , checkboxInput( "fileHeader"
                                                                          , "Dataset has a header row"
@@ -171,7 +181,6 @@ shinyUI(pageWithSidebar(
                                                                                     , "None"        = ""
                                                                                     )
                                                                        )
-                                                          , uiOutput("columnSelectorUI")
                                                           )
                                           
                                         )
