@@ -372,7 +372,7 @@ shinyServer(function(input, output) {
     # If we're generating data, just show the user the result of the last random
     # calculation
     if ( input$dataSourceType == "generate" ) { 
-      renderTable(createMatrix())()
+      HTML( renderTable(createMatrix())() )
     
     # If the user has asked us to use her data...  
     } else {
@@ -383,7 +383,7 @@ shinyServer(function(input, output) {
       #If that worked... show the user her data in a table
       if ( is.data.frame(userData) ) {
         
-        renderDataTable(userData)()
+        HTML( renderDataTable(userData)() )
       
       # If that failed...
       } else {
