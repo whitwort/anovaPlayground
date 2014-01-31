@@ -88,7 +88,7 @@ responseLimits <- function(d) {
 # client.  We don't have to worry about managing individual user sessions; shiny
 # will take care of that for us because it's awesome.
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   
   # # #
   # Reactive expressions
@@ -383,7 +383,7 @@ shinyServer(function(input, output) {
       #If that worked... show the user her data in a table
       if ( is.data.frame(userData) ) {
         
-        HTML( renderTable(userData)() )
+        HTML( renderDataTable(userData)() )
       
       # If that failed...
       } else {

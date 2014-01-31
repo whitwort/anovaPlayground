@@ -54,7 +54,7 @@ shinyUI(pageWithSidebar(
                                   , actionButton("refreshData", "Refresh data")
                                   )
                 , br()
-                , helpText(toHTML("Version 0.2.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
+                , helpText(toHTML("Version 0.3.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
                 )
   
     # Main tab panels
