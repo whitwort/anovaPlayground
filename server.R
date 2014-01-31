@@ -383,7 +383,7 @@ shinyServer(function(input, output) {
       #If that worked... show the user her data in a table
       if ( is.data.frame(userData) ) {
         
-        renderDataTable(userData)() )
+        renderDataTable(userData)()
       
       # If that failed...
       } else {
