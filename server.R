@@ -180,6 +180,8 @@ shinyServer(function(input, output, session) {
          !is.null(input$groupColumn) & 
          !is.null(input$responseColumn)) {
       
+      updateCheckboxInput(session, 'plotScale', value = TRUE)
+      
       userData <- parseUserData()
       data.frame( group     = userData[[input$groupColumn]]
                 , response  = userData[[input$responseColumn]]
@@ -189,6 +191,7 @@ shinyServer(function(input, output, session) {
     # our sampling matrix.
     } else {
       
+      updateCheckboxInput(session, 'plotScale', value = FALSE)
       data.frame( group     = rep(LETTERS[1:input$groups], each = input$n)
                 , response  = c(createMatrix()) 
                 )
@@ -368,7 +371,7 @@ shinyServer(function(input, output, session) {
   output$loadDataError <- renderUI({
     userData <- parseUserData()
     if ( is.data.frame(userData) ) {
-      HTML( renderText("") )
+      HTML( renderText("")() )
       
     } else {
       
