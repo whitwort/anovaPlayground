@@ -54,6 +54,10 @@ shinyUI(pageWithSidebar(
                                   , actionButton("refreshData", "Refresh data")
                                   )
                 , br()
+                , conditionalPanel( 'input.dataSourceType == "upload"'
+                                  , uiOutput("columnSelectorUI")
+                                  )
+                , br()
                 , helpText(toHTML("Version 0.3.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
                 )
   
@@ -80,9 +84,6 @@ shinyUI(pageWithSidebar(
                                          
                                     # Visualization options
                                   , helpText("Data visualization")
-                                  , conditionalPanel( 'input.dataSourceType == "upload"'
-                                                    , uiOutput("columnSelectorUI")
-                                                    )
                                   , checkboxInput("plotPoint",   "Data points",   TRUE )
                                   , checkboxInput("plotBoxplot", "Boxplots",      FALSE)
                                   , checkboxInput("plotDotplot", "Dotplots",      FALSE)
