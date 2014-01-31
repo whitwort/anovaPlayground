@@ -188,7 +188,7 @@ shinyUI(pageWithSidebar(
                         )
                      
                     , div( class = "row-fluid"
-                         , wellPanel( uiOutput("sourceDataUI")
+                         , wellPanel( dataTableOutput("sourceDataUI")
                                     )
                          )
                     )
