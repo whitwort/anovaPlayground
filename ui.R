@@ -84,8 +84,8 @@ shinyUI(pageWithSidebar(
                                          
                                     # Visualization options
                                   , helpText("Data visualization")
-                                  , checkboxInput("plotPoint",   "Data points",   TRUE )
-                                  , checkboxInput("plotBoxplot", "Boxplots",      FALSE)
+                                  , checkboxInput("plotBoxplot", "Boxplots",      TRUE )
+                                  , checkboxInput("plotPoint",   "Data points",   FALSE)
                                   , checkboxInput("plotDotplot", "Dotplots",      FALSE)
                                   , checkboxInput("plotMean",    "Global mean",   FALSE)
                                   , checkboxInput("plotMedian",  "Global median", FALSE)
@@ -134,9 +134,9 @@ shinyUI(pageWithSidebar(
                                         , conditionalPanel( 'input.dataSourceType == "upload"'
                                                           , selectInput( "uploadType"
                                                                        , "Get data from a"
-                                                                       , choices = c( "Web address"   = "url"
-                                                                                    , "Local file"    = "file"
-                                                                                    , "Class data" = "data"
+                                                                       , choices = c( "Class data set"  = "data"
+                                                                                    , "Local file"      = "file"
+                                                                                    , "Web address"     = "url"
                                                                                     )
                                                                        )
                                                           , conditionalPanel( 'input.uploadType == "url"'
@@ -153,37 +153,38 @@ shinyUI(pageWithSidebar(
                                                                                          , choices = list.files("data/")
                                                                                          )
                                                                             )
-                                                          , checkboxInput( "fileHeader"
-                                                                         , "Dataset has a header row"
-                                                                         , TRUE
-                                                                         )
-                                                          , selectInput( "fileSeparator" 
-                                                                       , "Separator"
-                                                                       , choices = c( "Whitespace"  = ""
-                                                                                    , "Comma"       = ","
-                                                                                    , "Semicolon"   = ";"
-                                                                                    , "Tab"         = "\t"
-                                                                                    )
-                                                                       )
-                                                          , selectInput( "naStrings" 
-                                                                       , "Missing data"
-                                                                       , choices = c( "NA"          = "NA"
-                                                                                    , "ND"          = "ND"
-                                                                                    , "None"        = "None"
-                                                                                    , "null"        = "null"
-                                                                                    , "Empty text"  = ""
+                                                          , conditionalPanel( 'input.uploadType == "file" || input.uploadType == "url"'
+                                                                            , checkboxInput( "fileHeader"
+                                                                                           , "Dataset has a header row"
+                                                                                           , TRUE
+                                                                                           )
+                                                                            , selectInput( "fileSeparator" 
+                                                                                         , "Separator"
+                                                                                         , choices = c( "Whitespace"  = ""
+                                                                                                      , "Comma"       = ","
+                                                                                                      , "Semicolon"   = ";"
+                                                                                                      , "Tab"         = "\t"
+                                                                                                      )
+                                                                                         )
+                                                                            , selectInput( "naStrings" 
+                                                                                         , "Missing data"
+                                                                                         , choices = c( "NA"          = "NA"
+                                                                                                      , "ND"          = "ND"
+                                                                                                      , "None"        = "None"
+                                                                                                      , "null"        = "null"
+                                                                                                      , "Empty text"  = ""
+                                                                                                      )
+                                                                                         )
+                                                                            , selectInput( "fileQuote"
+                                                                                         , "String quoting"
+                                                                                         , choices = c( 'Double (")'  = "\""
+                                                                                                      , "Single (')"  = "'"
+                                                                                                      , "None"        = ""
+                                                                                                      )
+                                                                                         )
+                                                                            )
 
-                                                                       )
                                                           )
-                                                          , selectInput( "fileQuote"
-                                                                       , "String quoting"
-                                                                       , choices = c( 'Double (")'  = "\""
-                                                                                    , "Single (')"  = "'"
-                                                                                    , "None"        = ""
-                                                                                    )
-                                                                       )
-                                                          )
-                                          
                                         )
                              )
                         )
