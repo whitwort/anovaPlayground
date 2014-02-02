@@ -19,23 +19,26 @@ shinyUI(pageWithSidebar(
     headerPanel("ANOVA Playground")
   
     # Sidebar with data transformation controls
-  , sidebarPanel( sliderInput( "globalScale"
-                             , "Adjust variation between groups"
-                             , value = 0
-                             , min   = -10
-                             , max   = 10
-                             , step  = 1
-                             )
-                , br()
-                , sliderInput( "groupScale" 
-                             , "Adjust variation within groups"
-                             , value = 0
-                             , min   = -10
-                             , max   = 10
-                             , step  = 1
-                             )
-                , br()
+  , sidebarPanel( conditionalPanel( 'input.dataSourceType == "upload"'
+                                  , uiOutput("columnSelectorUI")
+                                  )
                 , conditionalPanel( 'input.dataSourceType == "generate"'
+                                  , sliderInput( "globalScale"
+                                               , "Adjust variation between groups"
+                                               , value = 0
+                                               , min   = -10
+                                               , max   = 10
+                                               , step  = 1
+                                               )
+                                  , br()
+                                  , sliderInput( "groupScale" 
+                                               , "Adjust variation within groups"
+                                               , value = 0
+                                               , min   = -10
+                                               , max   = 10
+                                               , step  = 1
+                                               )
+                                  , br()
                                   , sliderInput( "groups"
                                                , "Number of groups"
                                                , value = 5
@@ -52,10 +55,6 @@ shinyUI(pageWithSidebar(
                   
                                   , br()
                                   , actionButton("refreshData", "Refresh data")
-                                  )
-                , br()
-                , conditionalPanel( 'input.dataSourceType == "upload"'
-                                  , uiOutput("columnSelectorUI")
                                   )
                 , br()
                 , helpText(toHTML("Version 0.3.  [Source code](https://github.com/whitwort/anovaPlayground) available on github."))
