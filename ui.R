@@ -115,6 +115,21 @@ shinyUI(pageWithSidebar(
                     , verbatimTextOutput("tSummary")
                     )
                )
+     
+#      , tabPanel( "Regression"
+#                  
+#                # TODO replace if a horizontal well is implemented in the framework
+#                , wellPanel( class = "well container-fluid"
+#                           , div( class = "row-fluid"
+#                                , uiOutput('response1UI')
+#                                , uiOutput('responsel2UI')
+#                                )
+#                           )
+#                , div( class = "row-fluid"
+#                     , plotOutput("regressionPlot")
+#                     , verbatimTextOutput("regressionSummary")
+#                     )
+#               )
     , tabPanel( "Source data"
               , div( class = "container-fluid" 
                    , div( class = "row-fluid"

@@ -463,6 +463,36 @@ shinyServer(function(input, output, session) {
     t.test(response~group, data = twoSampleData())
   })
   
+  
+  # regression panel
+#   output$response1UI <- renderUI({
+#     div( class = "span5"
+#        , selectInput( "response1"
+#                     , "First response:"
+#                     , choices = 
+#                     )
+#        )
+#   })
+#   output$response1UI <- renderUI({
+#     div( class = "span5"
+#        , selectInput( "response2"
+#                     , "Second response:"
+#                     , choices = 
+#                     )
+#        )
+#   })
+#   regressionData <- reactive({
+#     scaledData <- scaledTable()
+#     scaledData[ scaledData$group == input$groupLevel1 | scaledData$group == input$groupLevel2 , ]
+#   })
+#   output$regressionPlot <- renderPlot({
+#     p <- ggplot(twoSampleData(), aes(response, fill = group)) + 
+#       geom_density(alpha = 0.3)
+#     print(p)
+#   })
+#   output$regressionSummary     <- renderPrint({
+#     t.test(response~group, data = twoSampleData())
+#   })
     
   
 })
