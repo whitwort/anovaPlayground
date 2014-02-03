@@ -62,7 +62,7 @@ shinyUI(pageWithSidebar(
   
     # Main tab panels
   , mainPanel(tabsetPanel(
-      tabPanel( "Analysis"
+      tabPanel( "Analysis of Variance"
               , div( class = "container-fluid" 
                    , div( class = "row-fluid"
                         , div( class = "span9"
@@ -101,6 +101,20 @@ shinyUI(pageWithSidebar(
                    )
               )
 
+     , tabPanel( "Student's t-test"
+              
+               # TODO replace if a horizontal well is implemented in the framework
+               , wellPanel( class = "well container-fluid"
+                          , div( class = "row-fluid"
+                               , uiOutput('groupLevel1UI')
+                               , uiOutput('groupLevel2UI')
+                               )
+                          )
+               , div( class = "row-fluid"
+                    , plotOutput("tDensityPlot")
+                    , verbatimTextOutput("tSummary")
+                    )
+               )
     , tabPanel( "Source data"
               , div( class = "container-fluid" 
                    , div( class = "row-fluid"
@@ -205,9 +219,11 @@ shinyUI(pageWithSidebar(
 #     , tabPanel( "Assumptions"
 #               )
     
-    , tabPanel( "Description"
-              , helpText(toHTML("DESCRIPTION.md"))
-              )
-    ))
+#     , tabPanel( "Description"
+#               , helpText(toHTML("DESCRIPTION.md"))
+#               )
+
+    )
+)
     
 ))

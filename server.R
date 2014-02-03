@@ -282,6 +282,10 @@ shinyServer(function(input, output, session) {
       p <- p + ylim( responseLimits(sourceData) )
     }
     
+    if (length(levels(scaledData$group)) > 10) {
+      p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5))
+    }
+    
     # We call print() to send the final plot to the client
     print(p)
     
@@ -413,16 +417,52 @@ shinyServer(function(input, output, session) {
       responseColumns <- colnames(userData)[sapply(userData, is.numeric)]
       
       div( selectInput( "groupColumn"
-                       , "Grouping variable"
-                       , groupColumns
-                       )
-          , selectInput( "responseColumn"
-                       , "Response variable"
-                       , responseColumns
-                       )
-          )
+                      , "Grouping variable"
+                      , groupColumns
+                      )
+         , selectInput( "responseColumn"
+                      , "Response variable"
+                      , responseColumns
+                      )
+         )
     }
     
   })
+  
+  # t-test panel
+  groupLevels  <- reactive({
+    scaledData <- scaledTable()
+    levels(scaledData$group)
+  })
+  output$groupLevel1UI <- renderUI({
+    div( class = "span5"
+       , selectInput( "groupLevel1"
+                    , "First group:"
+                    , choices = groupLevels()
+                    )
+       )
+  })
+  output$groupLevel2UI <- renderUI({
+    div( class = "span5"
+       , selectInput( "groupLevel2"
+                    , "Second group:"
+                    , choices = setdiff(groupLevels(), input$groupLevel1)
+                    )
+       )
+  })
+  twoSampleData <- reactive({
+    scaledData <- scaledTable()
+    scaledData[ scaledData$group == input$groupLevel1 | scaledData$group == input$groupLevel2 , ]
+  })
+  output$tDensityPlot <- renderPlot({
+    p <- ggplot(twoSampleData(), aes(response, fill = group)) + 
+      geom_density(alpha = 0.3)
+    print(p)
+  })
+  output$tSummary     <- renderPrint({
+    t.test(response~group, data = twoSampleData())
+  })
+  
+    
   
 })
